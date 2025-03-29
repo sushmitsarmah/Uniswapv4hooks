@@ -1,96 +1,183 @@
-# v4-template
-### **A template for writing Uniswap v4 Hooks 🦄**
+# Toradle Synergy Bot with Uniswap Hooks
 
-[`Use this Template`](https://github.com/uniswapfoundation/v4-template/generate)
+A sophisticated bot-driven trading system for Uniswap V4 that leverages ZK proofs through Brevis to validate trading conditions and enforce comprehensive safety mechanisms. The system combines oracle price checks, liquidity impact limits, and time-window controls to ensure secure and controlled automated trading.
 
-1. The example hook [Counter.sol](src/Counter.sol) demonstrates the `beforeSwap()` and `afterSwap()` hooks
-2. The test template [Counter.t.sol](test/Counter.t.sol) preconfigures the v4 pool manager, test tokens, and test liquidity.
+![Toradle Synergy Bot](./assets/thumbnail.png)
 
-<details>
-<summary>Updating to v4-template:latest</summary>
+## 🌟 Features
 
-This template is actively maintained -- you can update the v4 dependencies, scripts, and helpers: 
+### Core Components
+- **ComprehensiveBotHook**: Advanced Uniswap V4 hook implementing multiple safety validations
+- **BotSwapExecutor**: Intermediary contract handling bot interactions and swap execution
+- **Brevis Integration**: ZK proof generation and verification for historical data validation
+
+### Safety Mechanisms
+1. **Time Window Controls**
+   - Configurable trading hours
+   - Day-of-week trading restrictions
+   - Granular time-based access control
+
+2. **Liquidity Protection**
+   - Maximum impact thresholds
+   - Dynamic liquidity checks
+   - Swap size limitations
+
+3. **Price Validation**
+   - Chainlink oracle integration
+   - Price deviation monitoring
+   - Stale price protection
+
+4. **ZK Proof Verification**
+   - Historical volatility validation
+   - Proof freshness checks
+   - Custom circuit integration
+
+## 🔧 Technical Architecture
+
+### Smart Contracts
+```solidity
+ComprehensiveBotHook.sol
+├── Time Window Checks
+├── Liquidity Impact Validation
+├── Oracle Price Verification
+└── Brevis ZK Proof Integration
+
+BotSwapExecutor.sol
+├── Bot Interface
+├── Swap Execution Logic
+└── Proof Data Management
+```
+
+### Key Interfaces
+
+```solidity
+interface IBrevisProof {
+    function verifyProof(
+        bytes32 circuitId,
+        bytes calldata proof,
+        bytes calldata publicInputs
+    ) external view returns (bool);
+}
+
+struct YourCircuitPublicInputs {
+    uint256 historicalVolatilityBps;
+    uint256 relevantTimestamp;
+}
+```
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js v14+
+- Hardhat
+- Uniswap V4 dependencies
+- Brevis SDK
+
+### Installation
 ```bash
-git remote add template https://github.com/uniswapfoundation/v4-template
-git fetch template
-git merge template/main <BRANCH> --allow-unrelated-histories
+git clone <repository-url>
+cd toradle-synergy-bot
+npm install
 ```
 
-</details>
-
----
-
-### Check Forge Installation
-*Ensure that you have correctly installed Foundry (Forge) and that it's up to date. You can update Foundry by running:*
-
-```
-foundryup
+### Configuration
+1. Create `.env` file:
+```env
+PRIVATE_KEY=your_private_key
+INFURA_KEY=your_infura_key
+ETHERSCAN_API_KEY=your_etherscan_key
 ```
 
-## Set up
-
-*requires [foundry](https://book.getfoundry.sh)*
-
+2. Configure trading parameters in `config.js`:
+```javascript
+module.exports = {
+    TRADING_START_HOUR_UTC: 0,
+    TRADING_END_HOUR_UTC: 24,
+    MAX_LIQUIDITY_IMPACT_BPS: 500,
+    MAX_PRICE_DEVIATION_BPS: 300
+}
 ```
-forge install
-forge test
+
+### Deployment
+```bash
+npx hardhat compile
+npx hardhat deploy --network <network>
 ```
 
-### Local Development (Anvil)
+## 🔒 Security Features
 
-Other than writing unit tests (recommended!), you can only deploy & test hooks on [anvil](https://book.getfoundry.sh/anvil/)
+### Time-Based Controls
+- Configurable trading windows
+- Day-of-week restrictions
+- UTC time standardization
+
+### Liquidity Protection
+```solidity
+uint256 public constant MAX_LIQUIDITY_IMPACT_BPS = 500; // 5%
+```
+- Prevents excessive market impact
+- Dynamic liquidity checks
+- Configurable thresholds
+
+### Oracle Integration
+```solidity
+function checkOraclePriceDeviation(PoolKey calldata key) internal view {
+    // Price deviation checks
+    // Staleness validation
+    // Normalization logic
+}
+```
+
+### ZK Proof Verification
+- Historical volatility validation
+- Timestamp freshness checks
+- Circuit-specific validations
+
+## 🔍 Testing
 
 ```bash
-# start anvil, a local EVM chain
-anvil
+# Run all tests
+npx hardhat test
 
-# in a new terminal
-forge script script/Anvil.s.sol \
-    --rpc-url http://localhost:8545 \
-    --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
-    --broadcast
+# Run specific test file
+npx hardhat test test/ComprehensiveBotHook.test.js
 ```
 
-See [script/](script/) for hook deployment, pool creation, liquidity provision, and swapping.
+## 📈 Performance Considerations
 
----
+### Gas Optimization
+- Efficient storage usage
+- Optimized proof verification
+- Minimal state changes
 
-<details>
-<summary><h2>Troubleshooting</h2></summary>
+### Scalability
+- Modular design
+- Upgradeable components
+- Configurable parameters
 
+## 🤝 Contributing
 
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
-### *Permission Denied*
+## 📄 License
 
-When installing dependencies with `forge install`, Github may throw a `Permission Denied` error
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
 
-Typically caused by missing Github SSH keys, and can be resolved by following the steps [here](https://docs.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh) 
+## 🙏 Acknowledgments
 
-Or [adding the keys to your ssh-agent](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#adding-your-ssh-key-to-the-ssh-agent), if you have already uploaded SSH keys
+- Uniswap V4 Team
+- Brevis Protocol
+- Chainlink
+- OpenZeppelin
 
-### Hook deployment failures
+## 📞 Contact
 
-Hook deployment failures are caused by incorrect flags or incorrect salt mining
+Project Link: [https://github.com/yourusername/toradle-synergy-bot](https://github.com/yourusername/toradle-synergy-bot)
 
-1. Verify the flags are in agreement:
-    * `getHookCalls()` returns the correct flags
-    * `flags` provided to `HookMiner.find(...)`
-2. Verify salt mining is correct:
-    * In **forge test**: the *deployer* for: `new Hook{salt: salt}(...)` and `HookMiner.find(deployer, ...)` are the same. This will be `address(this)`. If using `vm.prank`, the deployer will be the pranking address
-    * In **forge script**: the deployer must be the CREATE2 Proxy: `0x4e59b44847b379578588920cA78FbF26c0B4956C`
-        * If anvil does not have the CREATE2 deployer, your foundry may be out of date. You can update it with `foundryup`
+## 🚨 Disclaimer
 
-</details>
-
----
-
-Additional resources:
-
-[Uniswap v4 docs](https://docs.uniswap.org/contracts/v4/overview)
-
-[v4-periphery](https://github.com/uniswap/v4-periphery) contains advanced hook implementations that serve as a great reference
-
-[v4-core](https://github.com/uniswap/v4-core)
-
-[v4-by-example](https://v4-by-example.org)
-
+This software is in beta. Use at your own risk. Always test thoroughly before deploying to mainnet.
