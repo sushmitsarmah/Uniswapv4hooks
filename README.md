@@ -7,45 +7,46 @@ A sophisticated bot-driven trading system for Uniswap V4 that leverages ZK proof
 ## 🌟 Features
 
 ### Core Components
-- **ComprehensiveBotHook**: Advanced Uniswap V4 hook implementing multiple safety validations
+
+#### Hook System
+- **ComprehensiveBotHook**: Main hook implementing multiple safety validations
+- **BrevisVerificationHook**: Handles ZK proof verification
+- **SwapStrategyHook**: Manages swap strategies
+- **MaxSwapSizeEnforcerHook**: Controls maximum swap sizes
+- **OraclePriceCheckHook**: Validates prices against oracle
+- **AfterSwapLogHook**: Logs swap execution details
+
+#### Execution Layer
 - **BotSwapExecutor**: Intermediary contract handling bot interactions and swap execution
-- **Brevis Integration**: ZK proof generation and verification for historical data validation
+- **SignalSwapper**: Manages swap signals and execution flow
 
 ### Safety Mechanisms
-1. **Time Window Controls**
-   - Configurable trading hours
-   - Day-of-week trading restrictions
-   - Granular time-based access control
+1. **Multi-Layer Protection**
+   - Time window controls
+   - Liquidity impact limits
+   - Oracle price validation
+   - ZK proof verification
 
-2. **Liquidity Protection**
-   - Maximum impact thresholds
-   - Dynamic liquidity checks
-   - Swap size limitations
-
-3. **Price Validation**
-   - Chainlink oracle integration
+2. **Price & Liquidity Guards**
+   - Maximum swap size enforcement
    - Price deviation monitoring
-   - Stale price protection
-
-4. **ZK Proof Verification**
-   - Historical volatility validation
-   - Proof freshness checks
-   - Custom circuit integration
+   - Dynamic liquidity checks
 
 ## 🔧 Technical Architecture
 
-### Smart Contracts
+### Smart Contracts Structure
 ```solidity
-ComprehensiveBotHook.sol
-├── Time Window Checks
-├── Liquidity Impact Validation
-├── Oracle Price Verification
-└── Brevis ZK Proof Integration
-
-BotSwapExecutor.sol
-├── Bot Interface
-├── Swap Execution Logic
-└── Proof Data Management
+src/
+├── hooks/
+│   ├── ComprehensiveBotHook.sol
+│   ├── BrevisVerificationHook.sol
+│   ├── SwapStrategyHook.sol
+│   ├── MaxSwapSizeEnforcerHook.sol
+│   ├── OraclePriceCheckHook.sol
+│   ├── AfterSwapLogHook.sol
+│   ├── CombinedHook.sol
+│   └── SignalSwapper.sol
+└── BotSwapExecutor.sol
 ```
 
 ### Key Interfaces
@@ -68,8 +69,7 @@ struct YourCircuitPublicInputs {
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js v14+
-- Hardhat
+- Foundry/Forge
 - Uniswap V4 dependencies
 - Brevis SDK
 
@@ -77,83 +77,69 @@ struct YourCircuitPublicInputs {
 ```bash
 git clone <repository-url>
 cd toradle-synergy-bot
-npm install
+forge install
+```
+
+### Build and Test
+```bash
+# Build contracts
+forge build
+
+# Run tests
+forge test
+
+# Deploy (replace with your network)
+forge script script/Deploy.s.sol --rpc-url <your_rpc_url> --broadcast
 ```
 
 ### Configuration
-1. Create `.env` file:
+Create a `.env` file:
 ```env
+RPC_URL=your_rpc_url
 PRIVATE_KEY=your_private_key
-INFURA_KEY=your_infura_key
 ETHERSCAN_API_KEY=your_etherscan_key
-```
-
-2. Configure trading parameters in `config.js`:
-```javascript
-module.exports = {
-    TRADING_START_HOUR_UTC: 0,
-    TRADING_END_HOUR_UTC: 24,
-    MAX_LIQUIDITY_IMPACT_BPS: 500,
-    MAX_PRICE_DEVIATION_BPS: 300
-}
-```
-
-### Deployment
-```bash
-npx hardhat compile
-npx hardhat deploy --network <network>
 ```
 
 ## 🔒 Security Features
 
-### Time-Based Controls
-- Configurable trading windows
-- Day-of-week restrictions
-- UTC time standardization
-
-### Liquidity Protection
+### Comprehensive Hook System
 ```solidity
-uint256 public constant MAX_LIQUIDITY_IMPACT_BPS = 500; // 5%
-```
-- Prevents excessive market impact
-- Dynamic liquidity checks
-- Configurable thresholds
-
-### Oracle Integration
-```solidity
-function checkOraclePriceDeviation(PoolKey calldata key) internal view {
-    // Price deviation checks
-    // Staleness validation
-    // Normalization logic
+contract ComprehensiveBotHook is BaseHook {
+    // Time window checks
+    // Liquidity impact validation
+    // Oracle price verification
+    // Brevis ZK proof integration
 }
 ```
 
-### ZK Proof Verification
-- Historical volatility validation
-- Timestamp freshness checks
-- Circuit-specific validations
+### Swap Size Control
+```solidity
+contract MaxSwapSizeEnforcerHook is BaseHook {
+    // Maximum swap size enforcement
+    // Dynamic limits based on pool conditions
+}
+```
 
-## 🔍 Testing
-
-```bash
-# Run all tests
-npx hardhat test
-
-# Run specific test file
-npx hardhat test test/ComprehensiveBotHook.test.js
+### Oracle Integration
+```solidity
+contract OraclePriceCheckHook is BaseHook {
+    // Price deviation monitoring
+    // Staleness checks
+    // Multiple oracle support
+}
 ```
 
 ## 📈 Performance Considerations
 
 ### Gas Optimization
-- Efficient storage usage
+- Efficient hook combinations
 - Optimized proof verification
-- Minimal state changes
+- Strategic use of view functions
 
-### Scalability
-- Modular design
+### Modularity
+- Separate specialized hooks
+- Flexible hook combinations
 - Upgradeable components
-- Configurable parameters
 
 ## 🤝 Contributing
 
@@ -173,6 +159,7 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 - Brevis Protocol
 - Chainlink
 - OpenZeppelin
+- Foundry Team
 
 ## 📞 Contact
 
