@@ -16,7 +16,7 @@ error InvalidHookData();
  * @notice Struct representing the public outputs from the ZK circuit
  * @dev This must match exactly with the circuit's output structure
  */
-struct YourCircuitPublicInputs {
+struct CircuitPublicInputs {
     address accountAddr;    // The address of the account being verified
     uint64 blockNum;       // The block number when the data was recorded
     uint256 volume;        // The transfer volume/amount
@@ -50,7 +50,7 @@ contract BrevisVerificationHook is BrevisApp, BaseHook {
     /**
      * @notice Verifies a Brevis ZK proof passed via hookData before allowing swap.
      * @dev Expects hookData to be abi.encode(bytes proof, bytes publicInputs)
-     *      The structure of publicInputs MUST match YourCircuitPublicInputs.
+     *      The structure of publicInputs MUST match CircuitPublicInputs.
      */
     function beforeSwap(
         address sender,
@@ -83,8 +83,8 @@ contract BrevisVerificationHook is BrevisApp, BaseHook {
         }
 
         // Decode and validate public inputs
-        YourCircuitPublicInputs memory publicInputs;
-        try abi.decode(publicInputsBytes, (YourCircuitPublicInputs)) returns (YourCircuitPublicInputs memory _pi) {
+        CircuitPublicInputs memory publicInputs;
+        try abi.decode(publicInputsBytes, (CircuitPublicInputs)) returns (CircuitPublicInputs memory _pi) {
             publicInputs = _pi;
         } catch {
             revert InvalidHookData();
@@ -110,7 +110,7 @@ contract BrevisVerificationHook is BrevisApp, BaseHook {
         require(_vkHash == requiredCircuitId, "Invalid circuit ID");
         
         // Decode and process the circuit output
-        YourCircuitPublicInputs memory inputs = abi.decode(_circuitOutput, (YourCircuitPublicInputs));
+        CircuitPublicInputs memory inputs = abi.decode(_circuitOutput, (CircuitPublicInputs));
         
         // Additional validation can be added here if needed
         if (inputs.historicalVolume > MAX_ALLOWED_VOLATILITY_BPS) {
