@@ -1,58 +1,47 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {BaseHook} from "@uniswap/v4-core/contracts/BaseHook.sol";
-import {Hooks} from "@uniswap/v4-core/contracts/libraries/Hooks.sol";
-import {IPoolManager} from "@uniswap/v4-core/interfaces/IPoolManager.sol";
-import {PoolKey} from "@uniswap/v4-core/contracts/types/PoolKey.sol";
-
-// --- Brevis Specific Imports ---
-// !! Replace with actual Brevis interface imports from their SDK/Docs !!
-interface IBrevisProof {
-    function verifyProof(
-        bytes32 circuitId,
-        bytes calldata proof,
-        bytes calldata publicInputs
-    ) external view returns (bool);
-}
-
-// !! Define this struct based EXACTLY on your ZK circuit's public outputs !!
-struct YourCircuitPublicInputs {
-    uint256 historicalVolatilityBps; // Example
-    uint256 relevantTimestamp;       // Example
-    // Add other public outputs from your specific ZK circuit
-}
-// ------------------------------
+import {BaseHook} from "v4-core/contracts/BaseHook.sol";
+import {Hooks} from "v4-core/contracts/libraries/Hooks.sol";
+import {IPoolManager} from "v4-core/interfaces/IPoolManager.sol";
+import {PoolKey} from "v4-core/contracts/types/PoolKey.sol";
+import "../lib/BrevisApp.sol";
 
 // Custom Errors
 error BrevisProofVerificationFailed();
 error BrevisConditionNotMet(uint256 conditionValue, uint256 threshold);
 error InvalidHookData();
 
-contract BrevisVerificationHook is BaseHook {
+/**
+ * @notice Struct representing the public outputs from the ZK circuit
+ * @dev This must match exactly with the circuit's output structure
+ */
+struct YourCircuitPublicInputs {
+    address accountAddr;    // The address of the account being verified
+    uint64 blockNum;       // The block number when the data was recorded
+    uint256 volume;        // The transfer volume/amount
+    uint256 timestamp;     // The timestamp of the transaction
+    uint256 historicalVolume; // Historical volume for the account
+}
 
-    IBrevisProof public immutable brevisVerifier; // Address of Brevis verification contract
+contract BrevisVerificationHook is BrevisApp, BaseHook {
     bytes32 public immutable requiredCircuitId; // The specific circuit ID this hook validates
     uint256 public constant MAX_ALLOWED_VOLATILITY_BPS = 100; // Example threshold: 1%
 
-    address public owner; // Optional: for managing parameters
-
     constructor(
         IPoolManager _poolManager,
-        address _brevisVerifierAddress,
+        address _brevisRequest,
         bytes32 _requiredCircuitId
-    ) BaseHook(_poolManager) {
-        require(_brevisVerifierAddress != address(0), "Invalid Brevis Verifier");
-        brevisVerifier = IBrevisProof(_brevisVerifierAddress);
+    ) BrevisApp(_brevisRequest) BaseHook(_poolManager) {
+        require(_requiredCircuitId != bytes32(0), "Invalid Circuit ID");
         requiredCircuitId = _requiredCircuitId;
-        owner = msg.sender;
     }
 
     function getHookPermissions() public pure override returns (Hooks.Permissions) {
         return Hooks.Permissions({
             beforeInitialize: false, afterInitialize: false,
             beforeModifyPosition: false, afterModifyPosition: false,
-            beforeSwap: true, // Implement beforeSwap for pre-swap check
+            beforeSwap: true,
             afterSwap: false,
             beforeDonate: false, afterDonate: false
         });
@@ -64,12 +53,11 @@ contract BrevisVerificationHook is BaseHook {
      *      The structure of publicInputs MUST match YourCircuitPublicInputs.
      */
     function beforeSwap(
-        address sender, // Should be BotSwapExecutor
+        address sender,
         PoolKey calldata key,
         IPoolManager.SwapParams calldata params,
-        bytes calldata hookData // Expecting abi.encoded(proof, publicInputs)
-    ) external view override returns (bytes4) { // Mark as view
-
+        bytes calldata hookData
+    ) external view override returns (bytes4) {
         // Decode the proof and public inputs from hookData
         bytes memory zkProof;
         bytes memory publicInputsBytes;
@@ -81,40 +69,64 @@ contract BrevisVerificationHook is BaseHook {
         }
 
         // Verify the proof on-chain using the Brevis contract
-        bool isValid = brevisVerifier.verifyProof(
+        bool isValid = IBrevisRequest(brevisRequest).validateOpAppData(
+            keccak256(abi.encodePacked(zkProof)),
+            0, // nonce
+            keccak256(publicInputsBytes),
             requiredCircuitId,
-            zkProof,
-            publicInputsBytes
+            brevisOpConfig.challengeWindow,
+            brevisOpConfig.sigOption
         );
 
         if (!isValid) {
             revert BrevisProofVerificationFailed();
         }
 
-        // --- Condition Check based on Verified Public Inputs ---
-        // Decode the public inputs according to YOUR circuit's output structure
+        // Decode and validate public inputs
         YourCircuitPublicInputs memory publicInputs;
-         try abi.decode(publicInputsBytes, (YourCircuitPublicInputs)) returns (YourCircuitPublicInputs memory _pi) {
+        try abi.decode(publicInputsBytes, (YourCircuitPublicInputs)) returns (YourCircuitPublicInputs memory _pi) {
             publicInputs = _pi;
-         } catch {
-             revert InvalidHookData(); // Public inputs structure mismatch
-         }
+        } catch {
+            revert InvalidHookData();
+        }
 
-
-        // Example Check: Ensure proven historical volatility is below the threshold
-        if (publicInputs.historicalVolatilityBps > MAX_ALLOWED_VOLATILITY_BPS) {
+        // Check volatility threshold
+        if (publicInputs.historicalVolume > MAX_ALLOWED_VOLATILITY_BPS) {
             revert BrevisConditionNotMet(
-                publicInputs.historicalVolatilityBps,
+                publicInputs.historicalVolume,
                 MAX_ALLOWED_VOLATILITY_BPS
             );
         }
 
-        // Example Check: Ensure the proof isn't too old
-        // require(block.timestamp - publicInputs.relevantTimestamp < 1 hours, "Proof data too old");
-
-        // Add other checks based on the verified public inputs as needed...
-
-        // If verification is successful and conditions met, allow the swap
         return BrevisVerificationHook.beforeSwap.selector;
+    }
+
+    /**
+     * @notice Handles ZK proof results from Brevis
+     * @dev This is called by BrevisApp's callback mechanism
+     */
+    function handleProofResult(bytes32 _vkHash, bytes calldata _circuitOutput) internal override {
+        // Verify the circuit ID matches
+        require(_vkHash == requiredCircuitId, "Invalid circuit ID");
+        
+        // Decode and process the circuit output
+        YourCircuitPublicInputs memory inputs = abi.decode(_circuitOutput, (YourCircuitPublicInputs));
+        
+        // Additional validation can be added here if needed
+        if (inputs.historicalVolume > MAX_ALLOWED_VOLATILITY_BPS) {
+            revert BrevisConditionNotMet(
+                inputs.historicalVolume,
+                MAX_ALLOWED_VOLATILITY_BPS
+            );
+        }
+    }
+
+    /**
+     * @notice Handles optimistic proof results from Brevis
+     * @dev This is called by BrevisApp's optimistic callback mechanism
+     */
+    function handleOpProofResult(bytes32 _vkHash, bytes calldata _circuitOutput) internal override {
+        // For this example, we handle optimistic proofs the same way as ZK proofs
+        handleProofResult(_vkHash, _circuitOutput);
     }
 }
