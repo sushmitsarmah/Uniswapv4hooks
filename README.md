@@ -51,19 +51,8 @@ src/
 
 ### Key Interfaces
 
-```solidity
-interface IBrevisProof {
-    function verifyProof(
-        bytes32 circuitId,
-        bytes calldata proof,
-        bytes calldata publicInputs
-    ) external view returns (bool);
-}
-
-struct YourCircuitPublicInputs {
-    uint256 historicalVolatilityBps;
-    uint256 relevantTimestamp;
-}
+```
+Toradle Synergy Bot leverages Brevis to enable traders to declare profits without exposing their wallets or transaction details, ensuring privacy in trade verification. Brevis is also integrated into a beforeSwap hook to verify sufficient historical trading volume before executing a trade. This enhances security and fairness while maintaining data confidentiality in Toradle's predictive trading ecosystem.
 ```
 
 ## 🚀 Getting Started
